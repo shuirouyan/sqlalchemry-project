@@ -2,7 +2,7 @@
 # -*- coding: utf8 -*-
 
 from fastapi import FastAPI, Depends
-from sqlalchemy import DateTime, func, String, Float, select, update
+from sqlalchemy import DateTime, func, String, Float, select, update, insert, delete
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from pydantic import BaseModel
@@ -11,7 +11,7 @@ from datetime import datetime
 app = FastAPI()
 
 
-async_database_url = "mysql+aiomysql://root:Aa##123456@127.0.0.1:3307/fastapidb?charset=utf8"
+async_database_url = "mysql+aiomysql://root:Aa##123456@127.0.0.1:13307/fastapidb?charset=utf8"
 async_engine=create_async_engine(
         async_database_url,
         echo=True,
@@ -33,6 +33,7 @@ class Book(Base):
 
 class BookReq(BaseModel):
     id: int
+    price: float | None
     bookname: str
     author: str
     publisher: str
@@ -78,3 +79,11 @@ async def get_book_list_method(db: AsyncSession=Depends(get_db)):
 async def update_book_method(book: BookReq, db: AsyncSession=Depends(get_db)):
     result = await db.execute(update(Book).where(Book.id==book.id).values(bookname=book.bookname,publisher=book.publisher,author=book.author))
     return {"time":datetime.now(), "result":result.rowcount}
+
+@app.post("/book/save")
+async def save_book_method(book: BookReq, db: AsyncSession=Depends(get_db)):
+    obj_dict = book.__dict__
+    book = Book(**book.__dict__)
+    db.add(book)
+    await db.commit()
+    return book
